@@ -1,0 +1,15 @@
+<use name="CondFormats/JetMETObjects"/>
+<use name="DataFormats/Common"/>
+<use name="DataFormats/HepMCCandidate"/>
+<use name="DataFormats/JetReco"/>
+<use name="DataFormats/ParticleFlowCandidate"/>
+<use name="DataFormats/TrackReco"/>
+<use name="DataFormats/VertexReco"/>
+<use name="FWCore/Common"/>
+<use name="FWCore/Framework"/>
+<use name="FWCore/ParameterSet"/>
+<use name="FWCore/Utilities"/>
+<use name="HLTrigger/HLTcore"/>
+<use name="SimDataFormats/GeneratorProducts"/>
+
+<flags EDM_PLUGIN="1"/>
