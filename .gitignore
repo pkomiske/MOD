@@ -33,3 +33,5 @@
 
 # Custom
 .DS_Store
+bin/
+tmp/
