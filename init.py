@@ -21,6 +21,10 @@ def copy_collections():
     # iterate over data collections
     for collection,opts in COLLECTIONS.items():
 
+        # make file recording datapath for this collection
+        with open(os.path.join(GITREPO, collection, 'DATAPATH'), 'w') as f:
+            f.write(os.path.join(DATAPATH, collection))
+
         # determine paths
         src_path = os.path.join(GITREPO, collection)
         dst_path = os.path.join(DATAPATH, collection)
@@ -38,17 +42,18 @@ def copy_collections():
             print()
 
             if response == 'y':
-                print('Removing {}'.format(dst_path))
-                shutil.rmtree(dst_path, ignore_errors=True)
+
+                # SAFEGUARD
+                print('You actually do not want to remove this since it has important files!')
+                continue
+
+                #print('Removing {}'.format(dst_path))
+                #shutil.rmtree(dst_path, ignore_errors=True)
 
             else:
                 print('Leaving {} as is'.format(collection))
                 print()
                 continue
-
-        # make file recording datapath for this collection
-        with open(os.path.join(GITREPO, collection, 'DATAPATH'), 'w') as f:
-            f.write(os.path.join(DATAPATH, collection))
 
         # make collection directory
         os.mkdir(dst_path)

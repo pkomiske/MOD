@@ -10,22 +10,27 @@ with open(os.path.join(os.path.dirname(__file__), os.pardir, os.pardir, 'DATAPAT
 
 DATASETS = {'cms': 'JetPrimaryDataset', 'sim': 'QCDSimDatasets'}
 DATASET_PATHS = {k: os.path.join(DATAPATH, v) for k,v in DATASETS.items()}
-FILEFORMATS = {'mod', 'jets'}
+FILEFORMATS = {'mod', 'jet'}
 
-def get_filenames(path=None, dataset='cms', subdir='mod', ptmin=None, remove_ending=False, 
-                  include_path=False, must_include=None):
+def path(dataset, *args):
+    return os.path.join(DATASET_PATHS[dataset], *args)
 
-    path = DATAPATH if path is None else path
-    path = os.path.join(path, DATASETS[dataset], '' if subdir is None else subdir)
+def get_filenames(dataset='cms', subdir='mod', ptmin=None, remove_ending=False, 
+                  include_path=False, must_include=None, must_ignore=None):
+
+    local_path = path(dataset, '' if subdir is None else subdir)
 
     if ptmin is not None:
-            path = os.path.join(path, str(ptmin))
+        local_path = os.path.join(local_path, str(ptmin))
 
-    raw_filenames = os.listdir(path)
+    filenames = os.listdir(local_path)
     if must_include is None:
-        filenames = sorted(raw_filenames)
+        filenames = sorted(filenames)
     else:
-        filenames = sorted(filter(lambda x: must_include in x, raw_filenames))
+        filenames = sorted(filter(lambda x: must_include in x, filenames))
+
+    if must_ignore is not None:
+        filenames = sorted(filter(lambda x: must_ignore not in x, filenames))
 
     if include_path:
         filenames = [os.path.join(path, filename) for filename in filenames]
@@ -35,13 +40,13 @@ def get_filenames(path=None, dataset='cms', subdir='mod', ptmin=None, remove_end
 
     return filenames
 
-def get_sim_filenames_dict(path=None, subdir='mod', remove_ending=False, include_path=False, must_include=None):
+def get_sim_filenames_dict(subdir='mod', remove_ending=False, include_path=False, must_include=None):
 
     # sort these according to numerical value
-    sim_ptmins = sorted(get_filenames(path=path, dataset='sim', subdir=subdir), key=int)
+    sim_ptmins = sorted(get_filenames(dataset='sim', subdir=subdir, must_ignore='.tar.gz'), key=int)
 
     # get ordered dictionary of sim filenames
-    sim_filenames = OrderedDict([(ptmin, get_filenames(path=path, dataset='sim', subdir=subdir, ptmin=ptmin, 
+    sim_filenames = OrderedDict([(ptmin, get_filenames(dataset='sim', subdir=subdir, ptmin=ptmin, 
                                                        remove_ending=remove_ending, include_path=include_path,
                                                        must_include=must_include))
                                 for ptmin in sim_ptmins])

@@ -10,26 +10,26 @@ do_dijets_analyzer = False
 save_everything = True
 save_noparticles = True
 
-__all__ = ['batch_mod_to_jets']
+__all__ = ['batch_mod_to_jet']
 
 dijets_analyzer = os.path.relpath(os.path.join(os.path.dirname(__file__), os.pardir, 'bin', 'dijets_analyzer'))
 
-def run_mod_to_jets(args):
+def run_mod_to_jet(args):
 
     filename, dataset, ptmin = args
     path = os.path.join(utils.DATASET_PATHS[dataset])
     
     indir = os.path.join(path, 'mod', '' if ptmin is None else ptmin)
-    outdir = os.path.join(path, 'jets', '' if ptmin is None else ptmin)
+    outdir = os.path.join(path, 'jet', '' if ptmin is None else ptmin)
     os.makedirs(outdir, exist_ok=True)
     
     if do_dijets_analyzer:
-        command = '{} {}.mod {}.jets {}'.format(dijets_analyzer, os.path.join(indir, filename), 
+        command = '{} {}.mod {}.jet {}'.format(dijets_analyzer, os.path.join(indir, filename), 
                                                 os.path.join(outdir, filename), dataset)
         print(command)
         subprocess.run(command.split())
 
-    r = mod_io.MODReader(filename, path=outdir, dataset=dataset, ptmin=ptmin, fileformat='jets', store_particles=save_everything)
+    r = mod_io.MODReader(filename, path=outdir, dataset=dataset, ptmin=ptmin, fileformat='jet', store_particles=save_everything)
     nevs = (r.nev_good, r.nev_bad, r.nev_total)
 
     pickle_path = os.path.join(path, 'pickle', '' if ptmin is None else ptmin)
@@ -48,7 +48,7 @@ def analyze_dataset(args, name=''):
         
         start = time.time()
         good_events = bad_events = total_events = 0
-        for i,nevs in enumerate(pool.imap_unordered(run_mod_to_jets, args, chunksize=1)):
+        for i,nevs in enumerate(pool.imap_unordered(run_mod_to_jet, args, chunksize=1)):
             if (i+1) % 100 == 0:
                 print('{0}  [{1}/{2}] done in {3:.3f}s{0}'.format('\n' if do_dijets_analyzer else '', i+1, len(args), time.time() - start))
 
@@ -62,7 +62,7 @@ def analyze_dataset(args, name=''):
         print('Done in {:.3f}s'.format(time.time() - start))
         print()
 
-def batch_mod_to_jets():
+def batch_mod_to_jet():
 
     if do_cms:
         cms_filenames = utils.get_filenames(remove_ending=True)
@@ -80,7 +80,7 @@ if __name__ == '__main__':
     import utils
     import mod_io
 
-    batch_dijets_analyzer()
+    batch_mod_to_jet()
 
 else:
 
