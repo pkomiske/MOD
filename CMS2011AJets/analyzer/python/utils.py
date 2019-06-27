@@ -5,19 +5,20 @@ import time
 import energyflow as ef
 import numpy as np
 
-PATHS = {'cms': '/mnt/disk0/CMS2011A/JetPrimaryDataset', 
-         'sim': '/mnt/disk0/CMS2011A/QCDSimDatasets'}
+with open(os.path.join(os.path.dirname(__file__), os.pardir, os.pardir, 'DATAPATH'), 'r') as f:
+    DATAPATH = f.read().strip()
 
-DATASETS = {'cms': 0, 'sim': 1}
-FILEFORMATS = {'umod', 'jets'}
+DATASETS = {'cms': 'JetPrimaryDataset', 'sim': 'QCDSimDatasets'}
+DATASET_PATHS = {k: os.path.join(DATAPATH, v) for k,v in DATASETS.items()}
+FILEFORMATS = {'mod', 'jets'}
 
-def get_filenames(path=None, dataset='cms', subdir='umod', ptmin=None, remove_ending=False, 
-                  include_path=False, must_include=None, **kwargs):
-    
-    if path is None:
-        path = os.path.join(PATHS[dataset], '' if subdir is None else subdir)
+def get_filenames(path=None, dataset='cms', subdir='mod', ptmin=None, remove_ending=False, 
+                  include_path=False, must_include=None):
 
-        if ptmin is not None:
+    path = DATAPATH if path is None else path
+    path = os.path.join(path, DATASETS[dataset], '' if subdir is None else subdir)
+
+    if ptmin is not None:
             path = os.path.join(path, str(ptmin))
 
     raw_filenames = os.listdir(path)
@@ -30,20 +31,32 @@ def get_filenames(path=None, dataset='cms', subdir='umod', ptmin=None, remove_en
         filenames = [os.path.join(path, filename) for filename in filenames]
 
     if remove_ending:
-        return remove_endings(filenames)
+        filenames = [filename.split('.')[0] for filename in filenames]
 
     return filenames
 
-def remove_endings(filename_array):
-    return [filename.split('.')[0] for filename in filename_array]
+def get_sim_filenames_dict(path=None, subdir='mod', remove_ending=False, include_path=False, must_include=None):
 
-def get_sim_filenames_dict(subdir='umod', remove_ending=False, include_path=False, must_include=None):
-    sim_ptmins = sorted(get_filenames(dataset='sim', subdir=subdir), key=int)
-    sim_filenames = OrderedDict([(ptmin, get_filenames(dataset='sim', subdir=subdir, ptmin=ptmin, 
+    # sort these according to numerical value
+    sim_ptmins = sorted(get_filenames(path=path, dataset='sim', subdir=subdir), key=int)
+
+    # get ordered dictionary of sim filenames
+    sim_filenames = OrderedDict([(ptmin, get_filenames(path=path, dataset='sim', subdir=subdir, ptmin=ptmin, 
                                                        remove_ending=remove_ending, include_path=include_path,
                                                        must_include=must_include))
                                 for ptmin in sim_ptmins])
     return sim_filenames
+
+def separate_particle_arrays(particles, particles_index):
+    
+    # array to hold particles
+    particles_array = np.zeros(len(particles_index) - 1, dtype='O')
+    
+    # iterate over indices
+    for j,pi in enumerate(particles_index[:-1]):
+        particles_array[j] = np.asarray(particles[pi:particles_index[j+1]])
+        
+    return particles_array
 
 def concat_npz_files(filepaths, dataset, store_pfcs=True, store_gens=True):
     

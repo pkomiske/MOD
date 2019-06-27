@@ -8,18 +8,12 @@ import warnings
 
 import numpy as np
 
-from utils import *
+try:
+    from .utils import *
 
-def separate_particle_arrays(particles, particles_index):
-    
-    # array to hold particles
-    particles_array = np.zeros(len(particles_index) - 1, dtype='O')
-    
-    # iterate over indices
-    for j,pi in enumerate(particles_index[:-1]):
-        particles_array[j] = np.asarray(particles[pi:particles_index[j+1]])
-        
-    return particles_array
+# for standalone import
+except ImportError:
+    from utils import *
 
 class MODDataset(object):
 
@@ -98,24 +92,19 @@ class MODDataset(object):
 
     def store_cols(self, dset):
 
-        try:
+        # get cols from file
+        cols = self.hf[dset].attrs['cols'].astype('U')
+        setattr(self, dset + '_cols', cols)
 
-            # get cols from file
-            cols = self.hf[dset].attrs['cols'].astype('U')
-            setattr(self, dset + '_cols', cols)
+        for i,col in enumerate(cols):
 
-            for i,col in enumerate(cols):
+            # ensure cols are unique
+            if hasattr(self, col):
+                raise RuntimeError("Repeat instances of col '{}', check file validity".format(col))
 
-                # ensure cols are unique
-                if hasattr(self, col):
-                    raise RuntimeError("Repeat instances of col '{}', check file validity".format(col))
-
-                # store column index
-                else:
-                    setattr(self, col, i)
-        except:
-            print(cols)
-            raise
+            # store column index
+            else:
+                setattr(self, col, i)
 
     def close(self):
         self.hf.close()
@@ -124,11 +113,9 @@ class MODDataset(object):
         self.close()
         gc.collect()
 
-class uMODReader(object):
+class MODReader(object):
 
-    def __init__(self, filename, path=None, ptmin=None, dataset='cms', fileformat='umod',
-                                 store_ak5s=True, store_pfcs=True,
-                                 store_hards=True, store_gens=True):
+    def __init__(self, filename, path=None, ptmin=None, dataset='cms', fileformat='mod', store_particles=True):
 
         # ensure valid dataset
         assert dataset in DATASETS, 'dataset {} not in {}'.format(dataset, DATASETS)
@@ -140,7 +127,7 @@ class uMODReader(object):
         # ensure valid file format
         assert fileformat in FILEFORMATS, 'fileformat {} not in {}'.format(fileformat, FILEFORMATS)
         self.fileformat = fileformat
-        self.umod = (self.fileformat == 'umod')
+        self.mod = (self.fileformat == 'mod')
         
         # store filepath information
         ending = '.' + fileformat
@@ -150,21 +137,18 @@ class uMODReader(object):
         self.path = os.path.join(PATHS[self.dataset], self.fileformat, self.ptmin) if path is None else path
         
         # store options
-        self.store_ak5s = store_ak5s
-        self.store_pfcs = store_pfcs
-        self.store_hards = store_hards
-        self.store_gens = store_gens
+        self.store_particles = store_particles
         
         # dictionary to hold everything
         self.data = {'base_name': self.base_name, 'ptmin': self.ptmin, 'dataset': self.dataset, 'fileformat': self.fileformat}
         
-        # time the reading in of the uMOD file
+        # time the reading in of the MOD file
         self.start_time = time.time()
         self.read()
         self.duration = time.time() - self.start_time
 
         # get lumi block event totals if in jets 
-        if not self.umod:
+        if not self.mod:
             self.get_lb_nevs()
 
         # check event total
@@ -175,20 +159,35 @@ class uMODReader(object):
     def __getattr__(self, attr):
         return self.data[attr]
 
-    def save(self, path=None, endstr=''):
+    def save(self, path=None, endstr='', save_particles=True):
         
         # check that the file was actually done
-        assert 'umodproducer_duration' in self.data
+        assert 'modproducer_duration' in self.data
         
         # handle paths
         if path is None:
-            path = os.path.join(PATHS[self.dataset], 'pickle', self.ptmin if self.sim else '')
+            path = os.path.join(self.path, os.pardir, 'pickle', self.ptmin if self.sim else '')
         os.makedirs(path, exist_ok=True)
         
         # save data
         filename = '{}_{}{}.pickle'.format(self.base_name, self.fileformat, endstr)
         with open(os.path.join(path, filename), 'wb') as f:
-            pickle.dump(self.data, f)
+            data = self.data.copy()
+
+            # remove all particle related arrays
+            if not save_particles:
+                del data['pfcs']
+
+                if not self.mod:
+                    del data['ak52pfc']
+
+                if self.sim:
+                    del data['gens'], data['hards']
+
+                    if not self.mod:
+                        del data['ak52gen'], data['hard2gen']
+
+            pickle.dump(data, f)
 
     def get_lb_nevs(self):
         for lb_i,count in zip(*np.unique(self.lbs_i, return_counts=True)):
@@ -206,7 +205,7 @@ class uMODReader(object):
         lbs = []
 
         # matching
-        if not self.umod:
+        if not self.mod:
             ak52pfc, ak52gen, hard2gen = [], [], []
 
         with open(os.path.join(self.path, self.filename), 'r') as f:
@@ -227,7 +226,7 @@ class uMODReader(object):
                         lb['prescales_1'] = np.asarray(lb['prescales_1'], dtype=float)
                         lb['prescales_2'] = np.asarray(lb['prescales_2'], dtype=float)
                         lb['prescales'] = lb['prescales_1']*lb['prescales_2']
-                        if self.umod:
+                        if self.mod:
                             lb['counts'] = np.zeros(len(lb['triggers']))
                         lbs.append(lb)
                         
@@ -235,33 +234,29 @@ class uMODReader(object):
                     elif in_event:
                         in_event = False
 
-                        if self.umod:
+                        if self.mod:
                             lbs_i.append(len(lbs) - 1)
                             lb['nev'] += 1
 
-                        if self.store_ak5s:
-                            ak5s.append(np.asarray(ev_ak5s, dtype=float))
-                            ev_ak5s = []
+                        ak5s.append(np.asarray(ev_ak5s, dtype=float))
+                        ev_ak5s = []
 
-                        if self.store_pfcs:
+                        if self.store_particles:
                             pfcs.append(np.asarray(ev_pfcs, dtype=float))
                             ev_pfcs = []
 
-                        if self.store_hards:
                             hards.append(np.asarray(ev_hards, dtype=float))
                             ev_hards = []
 
-                        if self.store_gens:
                             gens.append(np.asarray(ev_gens, dtype=float))
                             ev_gens = []
 
-                        if not self.umod and not has_matches:
+                        if not self.mod and not has_matches:
                             ak52pfc.append(np.array([]))
 
                             if self.sim:
                                 ak52gen.append(np.array([]))
                                 hard2gen.append(np.array([]))
-
                     continue
 
                 # beginning of line tells you what it is
@@ -274,7 +269,7 @@ class uMODReader(object):
 
                     # particle flow candidate
                     if key == 'P':
-                        if self.store_pfcs:
+                        if self.store_particles:
                             ev_pfcs.append(parts[1:])
                         continue
 
@@ -283,13 +278,13 @@ class uMODReader(object):
 
                         # gen particle
                         if key == 'G':
-                            if self.store_gens:
+                            if self.store_particles:
                                 ev_gens.append(parts[1:])
                             continue
 
                         # hard process particle
                         if key == 'H':
-                            if self.store_hards:
+                            if self.store_particles:
                                 ev_hards.append(parts[1:])
                             continue
 
@@ -305,8 +300,7 @@ class uMODReader(object):
 
                     # antikt (R=0.5) jet
                     if key == 'AK5':
-                        if self.store_ak5s:
-                            ev_ak5s.append(parts[1:])
+                        ev_ak5s.append(parts[1:])
                         continue
 
                     # match CMS jets to PFC jets
@@ -325,12 +319,12 @@ class uMODReader(object):
                         npvs.append(parts[1])
                         continue
                         
-                    # time of event in seconds, umod only
+                    # time of event in seconds, mod only
                     if key == 't(s)':
                         times.append(float(parts[1]))
                         continue
                         
-                    # time of event offset in microseconds, umod only
+                    # time of event offset in microseconds, mod only
                     if key == 't(us)':
                         times[-1] += float(parts[1])/10**6
                         continue
@@ -354,7 +348,7 @@ class uMODReader(object):
                     if key == 'TR':
                         fired_triggers = np.asarray(parts[1:], dtype=int)
                         ftrigs.append(fired_triggers)
-                        if self.umod:
+                        if self.mod:
                             lb['counts'][fired_triggers] += 1
                         continue
 
@@ -369,7 +363,7 @@ class uMODReader(object):
 
                     # trigger names and prescales
                     if key.startswith('HLT'):
-                        lb['triggers'].append(key.split('_v')[0] if self.umod else key)
+                        lb['triggers'].append(key.split('_v')[0] if self.mod else key)
                         lb['prescales_1'].append(parts[1])
                         lb['prescales_2'].append(parts[2])
                         continue
@@ -407,7 +401,7 @@ class uMODReader(object):
                 elif key == 'NumTotalEvents':
                     self.data['nev_total'] = int(parts[1])
                 elif key == 'Duration(s)':
-                    self.data['umodproducer_duration'] = float(parts[1])
+                    self.data['modproducer_duration'] = float(parts[1])
                 elif key.startswith('#'):
                     pass
                         
@@ -427,13 +421,13 @@ class uMODReader(object):
         self.data['pfcs'] = np.asarray(pfcs)
         self.data['lbs'] = np.asarray(lbs)
 
-        if not self.umod:
+        if not self.mod:
             self.data['ak52pfc'] = np.asarray(ak52pfc)
 
         if self.sim:
             self.data['gens'] = np.asarray(gens)
             self.data['hards'] = np.asarray(hards)
             
-            if not self.umod:
+            if not self.mod:
                 self.data['ak52gen'] = np.asarray(ak52gen)
                 self.data['hard2gen'] = np.asarray(hard2gen)
