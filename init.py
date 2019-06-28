@@ -25,6 +25,9 @@ def copy_collections():
         with open(os.path.join(GITREPO, collection, 'DATAPATH'), 'w') as f:
             f.write(os.path.join(DATAPATH, collection))
 
+        # make plots dir in analyzer
+        os.makedirs(os.path.join(GITREPO, collection, 'analyzer', 'plots'), exist_ok=True)
+
         # determine paths
         src_path = os.path.join(GITREPO, collection)
         dst_path = os.path.join(DATAPATH, collection)
@@ -44,11 +47,11 @@ def copy_collections():
             if response == 'y':
 
                 # SAFEGUARD
-                print('You actually do not want to remove this since it has important files!')
-                continue
+                #print('You actually do not want to remove this since it has important files!')
+                #continue
 
-                #print('Removing {}'.format(dst_path))
-                #shutil.rmtree(dst_path, ignore_errors=True)
+                print('Removing {}'.format(dst_path))
+                shutil.rmtree(dst_path, ignore_errors=True)
 
             else:
                 print('Leaving {} as is'.format(collection))

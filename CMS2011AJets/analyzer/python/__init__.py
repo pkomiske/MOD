@@ -12,11 +12,11 @@ from .mod_to_jet import *
 # this list controls which functions are run at initialization time
 init_funcs = [
 
-    #'process_lumisbyls', 
-    #'batch_mod_to_jet',
-    #'process_jet_primary_dataset_lbs',
-    #'count_jet_primary_dataset_lbs',
-    #'extract_sim_cross_sections',
+    'process_lumisbyls', 
+    'batch_mod_to_jet',
+    'process_jet_primary_dataset_lbs',
+    'count_jet_primary_dataset_lbs',
+    'extract_sim_cross_sections',
     'make_filename_arrays'
 ]
 
