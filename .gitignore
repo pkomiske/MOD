@@ -38,3 +38,4 @@ tmp/
 .ipynb_checkpoints/
 **/__pycache__
 plots/
+Testing.ipynb

@@ -84,16 +84,19 @@ def style(func, **kwargs):
 # default style for cms data
 def cms_style(*args, **kwargs):
     cms_default = {'func': 'errorbar', 'label': 'CMS 2011 Open Data', 'color': 'black'}
+    cms_default.update(kwargs)
     return style(**cms_default)
 
 # default style for sim
 def sim_style(*args, **kwargs):
-    dim_default = {'func': 'errorbar', 'label': 'CMS 2011 Simulation', 'color': 'orange'}
-    return style(**dim_default)
+    sim_default = {'func': 'errorbar', 'label': 'CMS 2011 Simulation', 'color': 'orange'}
+    sim_default.update(kwargs)
+    return style(**sim_default)
 
 # default style for gen
 def gen_style(*args, **kwargs):
     gen_default = {'func': 'plot', 'ls': '--', 'label': r'\textsc{Pythia 6} Generation', 'color': 'blue'}
+    gen_default.update(kwargs)
     return style(**gen_default)
 
 # handle legend
@@ -144,8 +147,6 @@ def calc_hist(vals, bins=10, weights=None, density=True):
 # function to add a stamp to figures
 def stamp(left_x, top_y,
           ax=None,
-          line_0=r'AK5 Jets, $|\eta^{\rm jet}|<1.9$', 
-          line_1=r'$p_T^{\rm jet}\in[375,425]$ GeV',
           delta_y=0.075,
           textops_update=None,
           **kwargs):
@@ -161,7 +162,6 @@ def stamp(left_x, top_y,
                'transform': ax.transAxes}
     if isinstance(textops_update, dict):
         textops.update(textops_update)
-    kwargs.update({'line_0': line_0, 'line_1': line_1})
     
     # add text line by line
     for i in range(len(kwargs)):
@@ -182,6 +182,9 @@ def watermark(plot_file, scale=0.12, tx=44, ty=251,
                          out_plots_dir='../plots',
                          logo_fpath='../plots/bare/MODLogo.pdf',
                          **kwargs):
+
+    # ensure out_plots_dir exists
+    os.makedirs(out_plots_dir, exist_ok=True)
     
     # open files for bare plot and the logo
     bare_plot = open(os.path.join(in_plots_dir, plot_file), 'rb')

@@ -47,11 +47,11 @@ def copy_collections():
             if response == 'y':
 
                 # SAFEGUARD
-                #print('You actually do not want to remove this since it has important files!')
-                #continue
+                print('You actually do not want to remove this since it has important files!')
+                continue
 
-                print('Removing {}'.format(dst_path))
-                shutil.rmtree(dst_path, ignore_errors=True)
+                #print('Removing {}'.format(dst_path))
+                #shutil.rmtree(dst_path, ignore_errors=True)
 
             else:
                 print('Leaving {} as is'.format(collection))
@@ -60,6 +60,7 @@ def copy_collections():
 
         # make collection directory
         os.mkdir(dst_path)
+        os.mkdir(dst_path, 'plotdata')
 
         for datadir in opts['datadirs']:
 
@@ -86,6 +87,7 @@ def init_collections():
         for func in module.init_funcs:
             print('Running {}.{}'.format(collection, func))
             getattr(module, func)()
+            print()
 
 if __name__ == '__main__':
 

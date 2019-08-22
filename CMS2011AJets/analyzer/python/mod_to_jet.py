@@ -60,7 +60,6 @@ def analyze_dataset(args, name=''):
         print('Bad Events:', bad_events)
         print('Total Events:', total_events)
         print('Done in {:.3f}s'.format(time.time() - start))
-        print()
 
 def batch_mod_to_jet():
 

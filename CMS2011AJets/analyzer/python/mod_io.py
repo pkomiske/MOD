@@ -7,125 +7,29 @@ import time
 import warnings
 
 import numpy as np
+import six
 
+# for import as part of package
 try:
-    from .utils import *
+    from . import utils
 
 # for standalone import
 except ImportError:
-    from utils import *
-
-class MODDataset(object):
-
-    def __init__(self, filename, dataset, njets=-1, store_jets=True, store_pfcs=True, store_gens=True):
-
-        # check for valid dataset argument
-        assert dataset in {'cms', 'sim', 'gen'}, "dataset must be one of 'cms', 'sim', 'gen'"
-
-        # store parameters
-        self.cms = (dataset == 'cms')
-        self.sim = (dataset == 'sim')
-        self.gen = (dataset == 'gen')
-        self.store_jets = store_jets
-        self.store_pfcs = store_pfcs and not self.gen
-        self.store_gens = store_gens and not self.cms
-
-        # get filepath
-        if not filename.endswith('.h5'):
-            filename += '.h5'
-        if self.cms:
-            self.filepath = os.path.join(PATHS['cms'], 'cuts', filename)
-        else:
-            self.filepath = os.path.join(PATHS['sim'], 'cuts', filename)
-
-        # open h5 file
-        self.hf = h5py.File(self.filepath, 'r')
-
-        if self.store_jets:
-
-            # load selected jets
-            jets_slice = (slice(None) if njets == -1 else slice(njets))
-            self.jets_i = self.hf['jets_i'][jets_slice]
-            self.jets_f = self.hf['jets_f'][jets_slice]
-
-            # store jets cols
-            self.store_cols('jets_i')
-            self.store_cols('jets_f')
-
-        if self.store_pfcs:
-
-            # determine pfcs_index
-            pfcs_index_slice = slice(None) if njets == -1 else slice(njets + 1)
-            self.pfcs_index = self.hf['pfcs_index'][pfcs_index_slice]
-
-            # store pfcs as separate arrays
-            self.all_pfcs = self.hf['pfcs'][:self.pfcs_index[-1]]
-            self.pfcs = separate_particle_arrays(self.all_pfcs, self.pfcs_index)
-
-            # store pfcs cols
-            self.store_cols('pfcs')
-
-            # set pfcs as particls
-            if not self.gen:
-                self.particles = self.pfcs
-                self.particles_cols = self.pfcs_cols
-
-        if self.store_gens:
-
-            # determine gens_index
-            gens_index_slice = slice(None) if njets == -1 else slice(njets + 1)
-            self.gens_index = self.hf['gens_index'][gens_index_slice]
-
-            # store gens as separate arrays
-            self.all_gens = self.hf['gens'][:self.gens_index[-1]]
-            self.gens = separate_particle_arrays(self.all_gens, self.gens_index)
-
-            # store gens cols
-            if self.gen:
-                self.store_cols('gens')
-
-                self.particles = self.gens
-                self.particle_cols = self.gens_cols
-
-        # store filenames
-        self.filenames = self.hf['filenames'][:].astype('U')
-
-    def store_cols(self, dset):
-
-        # get cols from file
-        cols = self.hf[dset].attrs['cols'].astype('U')
-        setattr(self, dset + '_cols', cols)
-
-        for i,col in enumerate(cols):
-
-            # ensure cols are unique
-            if hasattr(self, col):
-                raise RuntimeError("Repeat instances of col '{}', check file validity".format(col))
-
-            # store column index
-            else:
-                setattr(self, col, i)
-
-    def close(self):
-        self.hf.close()
-
-    def __del__(self):
-        self.close()
-        gc.collect()
+    import utils
 
 class MODReader(object):
 
     def __init__(self, filename, path=None, ptmin=None, dataset='cms', fileformat='mod', store_particles=True):
 
         # ensure valid dataset
-        assert dataset in DATASETS, 'dataset {} not in {}'.format(dataset, DATASETS)
+        assert dataset in utils.DATASETS, 'dataset {} not in {}'.format(dataset, utils.DATASETS)
         self.dataset = dataset
         self.sim = (self.dataset == 'sim')
         if not self.sim:
             store_gens = store_hards = False
         
         # ensure valid file format
-        assert fileformat in FILEFORMATS, 'fileformat {} not in {}'.format(fileformat, FILEFORMATS)
+        assert fileformat in utils.FILEFORMATS, 'fileformat {} not in {}'.format(fileformat, utils.FILEFORMATS)
         self.fileformat = fileformat
         self.mod = (self.fileformat == 'mod')
         
@@ -134,7 +38,7 @@ class MODReader(object):
         self.filename = filename if filename.endswith(ending) else filename + ending
         self.base_name = self.filename.split('.')[0]
         self.ptmin = str(ptmin) if (self.sim and ptmin is not None) else ''
-        self.path = os.path.join(PATHS[self.dataset], self.fileformat, self.ptmin) if path is None else path
+        self.path = utils.path(self.dataset, self.fileformat, self.ptmin) if path is None else path
         
         # store options
         self.store_particles = store_particles

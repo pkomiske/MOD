@@ -13,7 +13,7 @@ __all__ = ['process_lumisbyls',
 
 def process_lumisbyls():
 
-    lumipath = os.path.join(utils.DATASET_PATHS['cms'], 'lumis')
+    lumipath = utils.path('cms', 'lumis')
 
     # names of files
     cert_file = 'Cert_160404-180252_7TeV_ReRecoNov08_Collisions11_JSON.txt'
@@ -64,11 +64,9 @@ def process_lumisbyls():
     with open(lumi_path, 'wb') as f:
         pickle.dump(lumis, f)
 
-    print()
-
 def process_jet_primary_dataset_lbs():
 
-    lumifilepath = os.path.join(utils.DATASET_PATHS['cms'], 'lumis', '2011Lumis.pickle')
+    lumifilepath = utils.path('cms', 'lumis', '2011Lumis.pickle')
 
     # load 2011lumisbyls
     lumis = np.load(lumifilepath, allow_pickle=True)
@@ -131,7 +129,7 @@ def process_jet_primary_dataset_lbs():
 
 def count_jet_primary_dataset_lbs():
 
-    lumipath = os.path.join(utils.DATASET_PATHS['cms'], 'lumis')
+    lumipath = utils.path('cms', 'lumis')
 
     lumis = np.load(os.path.join(lumipath, '2011Lumis.pickle'), allow_pickle=True)
     lbs = np.load(os.path.join(lumipath, 'ValidatedLumiblocks.pickle'), allow_pickle=True)
@@ -180,7 +178,6 @@ def count_jet_primary_dataset_lbs():
 
     zero_rl_present_lbs = [rnlb for rnlb in lbs if rnlb in zero_rl_lbs]
     print('Number of lumiblocks present in run 2011A with zero recorded lumi:', len(zero_rl_present_lbs))
-    print()
 
 def extract_sim_cross_sections():
 
@@ -208,7 +205,7 @@ def extract_sim_cross_sections():
             raise ValueError('cross sections differ across lumi block in the same sim dataset!')
         cross_sections[ptmin]['xs'] = xs
 
-    fp = os.path.join(utils.DATASET_PATHS['sim'], 'CrossSections.pickle')
+    fp = utils.path('sim', 'CrossSections.pickle')
     print('SIM Cross Sections by ptmin:', cross_sections)
     print('Saved to', fp)
     with open(fp, 'wb') as f:
