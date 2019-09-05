@@ -41,6 +41,7 @@
 // CMSSW HLTrigger
 #include "HLTrigger/HLTcore/interface/HLTConfigProvider.h"
 
+// CMSSW SimDataFormats
 #include "SimDataFormats/GeneratorProducts/interface/GenRunInfoProduct.h"
 
 // helpful webpages
